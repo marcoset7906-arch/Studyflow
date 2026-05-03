@@ -375,6 +375,7 @@ body{font-family:'Sora',sans-serif;background:var(--bg);color:var(--text);min-he
   width:100%;max-width:600px;
   padding:20px 20px 40px;
   animation:slideUp .25s ease;
+  max-height:90vh;overflow-y:auto;
 }
 .modal-handle{width:36px;height:3px;background:var(--border2);border-radius:2px;margin:0 auto 16px;}
 .modal-title{font-size:17px;font-weight:600;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;}
@@ -940,6 +941,7 @@ const WIDGET_DEFS = [
   {id:'racha',name:'Racha de estudio',desc:'Días consecutivos con actividad',icon:'⚡',color:'var(--amber-bg)',iconBg:'rgba(255,190,92,.3)'},
   {id:'materia-top',name:'Materia más activa',desc:'La asignatura con más tareas',icon:'📚',color:'var(--blue-bg)',iconBg:'rgba(92,184,255,.3)'},
   {id:'proxima',name:'Próxima entrega',desc:'La tarea más urgente por fecha',icon:'⏰',color:'var(--pink-bg)',iconBg:'rgba(255,126,199,.3)'},
+  {id:'recordatorios',name:'Recordatorios',desc:'Tus recordatorios pendientes',icon:'📌',color:'rgba(255,190,92,0.12)',iconBg:'rgba(255,190,92,.3)'},
 ];
 
 let currentUser = null;
@@ -959,6 +961,37 @@ function saveUsersToStorage(){
   localStorage.setItem(LS_KEY, JSON.stringify(toSave));
 }
 
+function saveAllUsers(){
+  // Guarda todos los usuarios, incluyendo los perfiles editados de demo
+  const toSave={};
+  for(const[k,u] of Object.entries(USERS)) toSave[k]=u;
+  localStorage.setItem(LS_KEY+'_all', JSON.stringify(toSave));
+}
+
+function loadAllUsers(){
+  try{
+    const raw=localStorage.getItem(LS_KEY+'_all');
+    if(!raw)return;
+    const saved=JSON.parse(raw);
+    // Solo sobreescribir campos de perfil, no datos de tareas/notas de demo
+    for(const[k,u] of Object.entries(saved)){
+      if(USERS[k]){
+        // Merge profile fields only
+        USERS[k].name=u.name;
+        USERS[k].email=u.email;
+        USERS[k].grado=u.grado;
+        USERS[k].bio=u.bio;
+        USERS[k].color=u.color;
+        USERS[k].textColor=u.textColor;
+        USERS[k].initials=u.initials;
+        if(u.pass) USERS[k].pass=u.pass;
+      } else {
+        USERS[k]=u;
+      }
+    }
+  }catch(e){console.warn('Error cargando perfiles:',e);}
+}
+
 function loadUsersFromStorage(){
   try{
     const raw=localStorage.getItem(LS_KEY);
@@ -972,6 +1005,19 @@ function loadUsersFromStorage(){
 
 // Cargar cuentas guardadas al arrancar
 loadUsersFromStorage();
+loadAllUsers();
+
+// Sesión persistente — auto-login si hay sesión guardada
+(function autoLogin(){
+  try{
+    const savedKey = localStorage.getItem('studyflow_session');
+    if(savedKey && USERS[savedKey]){
+      currentKey = savedKey;
+      currentUser = USERS[savedKey];
+      enterApp();
+    }
+  }catch(e){}
+})();
 
 // ===== AUTH =====
 function quickLogin(key){
@@ -989,6 +1035,7 @@ function doLogin(){
   for(const[k,u] of Object.entries(USERS)){
     if(u.email===email&&u.pass===pass){
       currentKey=k; currentUser=u;
+      localStorage.setItem('studyflow_session', k);
       enterApp(); return;
     }
   }
@@ -997,6 +1044,7 @@ function doLogin(){
 
 function logout(){
   currentUser=null;currentKey=null;
+  localStorage.removeItem('studyflow_session');
   document.getElementById('app-screen').classList.remove('show');
   document.getElementById('app-screen').style.display='none';
   document.getElementById('login-screen').style.display='flex';
@@ -1060,6 +1108,7 @@ function doRegister(){
   document.getElementById('register-screen').style.display='none';
   currentKey=key; currentUser=USERS[key];
   saveUsersToStorage();
+  localStorage.setItem('studyflow_session', key);
   showToast('✦ ¡Cuenta creada! Bienvenido/a a StudyFlow');
   enterApp();
 }
@@ -1076,7 +1125,7 @@ function enterApp(){
   document.getElementById('big-avatar').style.cssText=`background:${currentUser.color};color:${currentUser.textColor};`;
   document.getElementById('big-avatar').textContent=currentUser.initials;
   document.getElementById('profile-name-txt').textContent=currentUser.name;
-  document.getElementById('profile-info-txt').textContent=currentUser.grado;
+  document.getElementById('profile-info-txt').textContent=(currentUser.grado||'')+(currentUser.email?' · '+currentUser.email:'');
   document.getElementById('profile-bio').textContent=currentUser.bio;
   // Populate subject select
   const sel=document.getElementById('t-materia');
@@ -1153,8 +1202,25 @@ function buildWidget(w){
       sub=sorted[0].titulo.slice(0,22)+(sorted[0].titulo.length>22?'…':'');
     } else {val='—';sub='sin entregas';}
     pill=`<div class="widget-pill" style="background:var(--pink-bg);color:var(--pink)">próxima entrega</div>`;
+  } else if(w.id==='recordatorios'){
+    const notas=currentUser.notas||[];
+    const pend=notas.filter(n=>!n.done).length;
+    const vencidos=notas.filter(n=>!n.done&&n.fecha&&isOv(n.fecha)).length;
+    val=pend;
+    sub=pend===1?'recordatorio pendiente':'recordatorios pendientes';
+    if(vencidos>0){
+      pill=`<div class="widget-pill" style="background:var(--red-bg);color:var(--red)">⚠ ${vencidos} vencido${vencidos>1?'s':''}</div>`;
+    } else if(pend>0){
+      const conFecha=notas.filter(n=>!n.done&&n.fecha).sort((a,b)=>a.fecha.localeCompare(b.fecha));
+      pill=conFecha.length
+        ? `<div class="widget-pill" style="background:var(--amber-bg);color:var(--amber)">📅 ${fmtDate(conFecha[0].fecha)}</div>`
+        : `<div class="widget-pill" style="background:var(--amber-bg);color:var(--amber)">Sin fecha límite</div>`;
+    } else {
+      pill=`<div class="widget-pill" style="background:var(--green-bg);color:var(--green)">✓ Todo al día</div>`;
+    }
   }
-  return `<div class="widget" style="background:${w.color};border-color:transparent" onclick="switchTab('tareas')">
+  const widgetTab=w.id==='recordatorios'?'recordatorios':'tareas';
+  return `<div class="widget" style="background:${w.color};border-color:transparent" onclick="switchTab('${widgetTab}')">
     <div class="widget-header">
       <div class="widget-icon" style="background:${w.iconBg}">${w.icon}</div>
       <div class="widget-title">${w.name}</div>
@@ -1578,7 +1644,7 @@ function saveEditProfile(){
     currentUser.color=AVATAR_COLORS[selIdx].bg;
     currentUser.textColor=AVATAR_COLORS[selIdx].text;
   }
-  if(currentKey&&currentKey!=='lucia'&&currentKey!=='marcos') saveUsersToStorage();
+  saveAllUsers();
   closeEditProfile();
   updateTopbar();
   renderPerfil();
@@ -1638,7 +1704,7 @@ function saveChangePass(){
   if(newP.length<6){showToast('⚠ La contraseña debe tener al menos 6 caracteres');return;}
   if(newP!==conf){showToast('⚠ Las contraseñas no coinciden');return;}
   currentUser.pass=newP;
-  if(currentKey&&currentKey!=='lucia'&&currentKey!=='marcos') saveUsersToStorage();
+  saveAllUsers();
   closeChangePass();
   showToast('🔑 Contraseña actualizada');
 }
