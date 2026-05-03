@@ -444,6 +444,35 @@ body{font-family:'Sora',sans-serif;background:var(--bg);color:var(--text);min-he
   font-family:'Sora',sans-serif;cursor:pointer;transition:all .15s;
 }
 .logout-btn:hover{background:var(--red);color:#fff;}
+.edit-profile-btn{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:7px 16px;border-radius:20px;margin-top:12px;
+  background:var(--accent-bg);color:var(--accent2);
+  border:1px solid var(--accent-border);
+  font-size:12px;font-weight:600;
+  font-family:'Sora',sans-serif;cursor:pointer;transition:all .15s;
+}
+.edit-profile-btn:hover{background:var(--accent);color:#fff;}
+.profile-action-row{display:flex;gap:8px;margin-bottom:10px;}
+.profile-action-btn{
+  flex:1;padding:12px;
+  background:var(--card);color:var(--text2);
+  border:1px solid var(--border);
+  border-radius:var(--r-sm);font-size:13px;font-weight:600;
+  font-family:'Sora',sans-serif;cursor:pointer;transition:all .15s;
+  display:flex;align-items:center;justify-content:center;gap:6px;
+}
+.profile-action-btn:hover{border-color:var(--border2);color:var(--text);}
+.avatar-color-opt{
+  width:32px;height:32px;border-radius:50%;
+  cursor:pointer;border:3px solid transparent;
+  transition:all .15s;
+}
+.avatar-color-opt.selected{border-color:#fff;transform:scale(1.1);}
+.pass-strength{height:3px;border-radius:2px;margin-top:6px;transition:all .3s;background:var(--border);}
+.pass-strength.weak{background:var(--red);width:33%;}
+.pass-strength.fair{background:var(--amber);width:66%;}
+.pass-strength.strong{background:var(--green);width:100%;}
 
 /* ===== TOAST ===== */
 .toast{
@@ -654,6 +683,7 @@ body{font-family:'Sora',sans-serif;background:var(--bg);color:var(--text);min-he
         <div class="profile-big-avatar" id="big-avatar"></div>
         <div class="profile-name" id="profile-name-txt"></div>
         <div class="profile-info" id="profile-info-txt"></div>
+        <button class="edit-profile-btn" onclick="openEditProfile()">✏️ Editar perfil</button>
         <div class="profile-stats">
           <div class="profile-stat">
             <div class="profile-stat-val" id="ps-total">0</div>
@@ -671,7 +701,11 @@ body{font-family:'Sora',sans-serif;background:var(--bg);color:var(--text);min-he
       </div>
       <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:16px;margin-bottom:12px;">
         <div style="font-size:12px;color:var(--text2);margin-bottom:10px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;">Sobre mí</div>
-        <div style="font-size:13px;color:var(--text2);" id="profile-bio"></div>
+        <div style="font-size:13px;color:var(--text2);line-height:1.6;" id="profile-bio"></div>
+      </div>
+      <div class="profile-action-row">
+        <button class="profile-action-btn" onclick="openEditProfile()">✏️ Editar datos</button>
+        <button class="profile-action-btn" onclick="openChangePass()">🔑 Cambiar contraseña</button>
       </div>
       <button class="logout-btn" onclick="logout()">Cerrar sesión</button>
     </div>
@@ -778,6 +812,65 @@ body{font-family:'Sora',sans-serif;background:var(--bg);color:var(--text);min-he
 </div>
 
 <div class="toast" id="toast"></div>
+
+<!-- EDIT PROFILE MODAL -->
+<div class="modal-ov" id="edit-profile-modal" onclick="if(event.target.id==='edit-profile-modal')closeEditProfile()">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">
+      Editar perfil
+      <button class="modal-close-btn" onclick="closeEditProfile()">✕</button>
+    </div>
+    <div class="f-group">
+      <label>Nombre completo *</label>
+      <input type="text" id="ep-name" placeholder="Tu nombre">
+    </div>
+    <div class="f-group">
+      <label>Grado / Carrera</label>
+      <input type="text" id="ep-grado" placeholder="Ej. 2º Ingeniería Informática">
+    </div>
+    <div class="f-group">
+      <label>Email</label>
+      <input type="email" id="ep-email" placeholder="tu@email.com">
+    </div>
+    <div class="f-group">
+      <label>Sobre mí (bio)</label>
+      <textarea id="ep-bio" placeholder="Cuéntanos algo sobre ti..." style="height:80px;resize:none;"></textarea>
+    </div>
+    <div class="f-group">
+      <label>Color del avatar</label>
+      <div id="ep-color-row" style="display:flex;gap:10px;flex-wrap:wrap;margin-top:6px;"></div>
+    </div>
+    <button class="btn-save" onclick="saveEditProfile()">Guardar cambios</button>
+  </div>
+</div>
+
+<!-- CHANGE PASSWORD MODAL -->
+<div class="modal-ov" id="change-pass-modal" onclick="if(event.target.id==='change-pass-modal')closeChangePass()">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">
+      Cambiar contraseña
+      <button class="modal-close-btn" onclick="closeChangePass()">✕</button>
+    </div>
+    <div class="f-group">
+      <label>Contraseña actual</label>
+      <input type="password" id="cp-current" placeholder="••••••••">
+    </div>
+    <div class="login-err" id="cp-err" style="display:none;margin-top:-4px;margin-bottom:8px;">Contraseña actual incorrecta</div>
+    <div class="f-group">
+      <label>Nueva contraseña</label>
+      <input type="password" id="cp-new" placeholder="Mínimo 6 caracteres" oninput="checkPassStrength()">
+      <div class="pass-strength" id="pass-strength-bar"></div>
+      <div style="font-size:11px;color:var(--text3);margin-top:4px;" id="pass-strength-txt"></div>
+    </div>
+    <div class="f-group">
+      <label>Confirmar nueva contraseña</label>
+      <input type="password" id="cp-confirm" placeholder="Repite la nueva contraseña">
+    </div>
+    <button class="btn-save" onclick="saveChangePass()">Actualizar contraseña</button>
+  </div>
+</div>
 
 <script>
 // ===== DATA =====
@@ -1405,6 +1498,19 @@ function saveNota(){
 }
 
 // ===== PERFIL =====
+const AVATAR_COLORS = [
+  {bg:'rgba(124,92,252,.25)',text:'#9D82FF'},
+  {bg:'rgba(61,214,140,.2)',text:'#3DD68C'},
+  {bg:'rgba(255,107,107,.2)',text:'#FF8080'},
+  {bg:'rgba(255,190,92,.2)',text:'#FFBE5C'},
+  {bg:'rgba(92,184,255,.2)',text:'#5CB8FF'},
+  {bg:'rgba(255,126,199,.2)',text:'#FF7EC7'},
+];
+
+function getInitials(name){
+  return name.trim().split(/\s+/).slice(0,2).map(w=>w[0].toUpperCase()).join('');
+}
+
 function renderPerfil(){
   const t=currentUser.tasks;
   const done=t.filter(x=>x.done).length;
@@ -1412,6 +1518,122 @@ function renderPerfil(){
   document.getElementById('ps-total').textContent=t.length;
   document.getElementById('ps-done').textContent=done;
   document.getElementById('ps-pct').textContent=pct+'%';
+  document.getElementById('profile-bio').textContent=currentUser.bio||'Sin bio todavía.';
+}
+
+// ===== EDIT PROFILE =====
+function openEditProfile(){
+  document.getElementById('ep-name').value=currentUser.name||'';
+  document.getElementById('ep-grado').value=currentUser.grado||'';
+  document.getElementById('ep-email').value=currentUser.email||'';
+  document.getElementById('ep-bio').value=currentUser.bio||'';
+  // render color picker
+  const row=document.getElementById('ep-color-row');
+  row.innerHTML=AVATAR_COLORS.map((c,i)=>{
+    const sel=currentUser.color===c.bg;
+    return `<div class="avatar-color-opt${sel?' selected':''}" style="background:${c.bg};width:32px;height:32px;border-radius:50%;cursor:pointer;border:3px solid ${sel?'#fff':'transparent'};transition:all .15s;" onclick="selectAvatarColor(${i},this)"></div>`;
+  }).join('');
+  document.getElementById('edit-profile-modal').classList.add('open');
+  setTimeout(()=>document.getElementById('ep-name').focus(),100);
+}
+
+function selectAvatarColor(idx,el){
+  document.querySelectorAll('#ep-color-row .avatar-color-opt').forEach(e=>{
+    e.style.borderColor='transparent';e.classList.remove('selected');
+  });
+  el.style.borderColor='#fff';el.classList.add('selected');
+  el.dataset.idx=idx;
+  // store selected index
+  document.getElementById('ep-color-row').dataset.selected=idx;
+}
+
+function closeEditProfile(){
+  document.getElementById('edit-profile-modal').classList.remove('open');
+}
+
+function saveEditProfile(){
+  const name=document.getElementById('ep-name').value.trim();
+  if(!name){showToast('⚠ El nombre no puede estar vacío');return;}
+  const email=document.getElementById('ep-email').value.trim();
+  if(!email){showToast('⚠ El email no puede estar vacío');return;}
+  // check email not already in use by another account
+  for(const[k,u] of Object.entries(USERS)){
+    if(k!==currentKey&&u.email===email){showToast('⚠ Ese email ya está en uso');return;}
+  }
+  currentUser.name=name;
+  currentUser.email=email;
+  currentUser.grado=document.getElementById('ep-grado').value.trim();
+  currentUser.bio=document.getElementById('ep-bio').value.trim();
+  currentUser.initials=getInitials(name);
+  // color
+  const selIdx=document.getElementById('ep-color-row').dataset.selected;
+  if(selIdx!==undefined&&AVATAR_COLORS[selIdx]){
+    currentUser.color=AVATAR_COLORS[selIdx].bg;
+    currentUser.textColor=AVATAR_COLORS[selIdx].text;
+  }
+  if(currentKey&&currentKey!=='lucia'&&currentKey!=='marcos') saveUsersToStorage();
+  closeEditProfile();
+  updateTopbar();
+  renderPerfil();
+  // update big avatar
+  const ba=document.getElementById('big-avatar');
+  ba.style.background=currentUser.color;
+  ba.style.color=currentUser.textColor;
+  ba.textContent=currentUser.initials;
+  document.getElementById('profile-name-txt').textContent=currentUser.name;
+  document.getElementById('profile-info-txt').textContent=(currentUser.grado||'')+' · '+(currentUser.email||'');
+  showToast('✓ Perfil actualizado');
+}
+
+function updateTopbar(){
+  const av=document.getElementById('top-avatar');
+  av.style.background=currentUser.color;
+  av.style.color=currentUser.textColor;
+  av.textContent=currentUser.initials;
+  document.getElementById('top-name').textContent=currentUser.name.split(' ')[0];
+}
+
+// ===== CHANGE PASSWORD =====
+function openChangePass(){
+  document.getElementById('cp-current').value='';
+  document.getElementById('cp-new').value='';
+  document.getElementById('cp-confirm').value='';
+  document.getElementById('cp-err').style.display='none';
+  document.getElementById('pass-strength-bar').className='pass-strength';
+  document.getElementById('pass-strength-txt').textContent='';
+  document.getElementById('change-pass-modal').classList.add('open');
+  setTimeout(()=>document.getElementById('cp-current').focus(),100);
+}
+
+function closeChangePass(){
+  document.getElementById('change-pass-modal').classList.remove('open');
+}
+
+function checkPassStrength(){
+  const v=document.getElementById('cp-new').value;
+  const bar=document.getElementById('pass-strength-bar');
+  const txt=document.getElementById('pass-strength-txt');
+  if(!v){bar.className='pass-strength';txt.textContent='';return;}
+  const hasUpper=/[A-Z]/.test(v),hasNum=/[0-9]/.test(v),hasSpec=/[^A-Za-z0-9]/.test(v);
+  const score=(v.length>=8?1:0)+(hasUpper?1:0)+(hasNum?1:0)+(hasSpec?1:0);
+  if(score<=1){bar.className='pass-strength weak';txt.textContent='Débil';}
+  else if(score<=2){bar.className='pass-strength fair';txt.textContent='Regular';}
+  else{bar.className='pass-strength strong';txt.textContent='Fuerte ✓';}
+}
+
+function saveChangePass(){
+  const curr=document.getElementById('cp-current').value;
+  const newP=document.getElementById('cp-new').value;
+  const conf=document.getElementById('cp-confirm').value;
+  const errEl=document.getElementById('cp-err');
+  errEl.style.display='none';
+  if(curr!==currentUser.pass){errEl.style.display='block';return;}
+  if(newP.length<6){showToast('⚠ La contraseña debe tener al menos 6 caracteres');return;}
+  if(newP!==conf){showToast('⚠ Las contraseñas no coinciden');return;}
+  currentUser.pass=newP;
+  if(currentKey&&currentKey!=='lucia'&&currentKey!=='marcos') saveUsersToStorage();
+  closeChangePass();
+  showToast('🔑 Contraseña actualizada');
 }
 
 // ===== UTILS =====
@@ -1429,6 +1651,8 @@ document.addEventListener('keydown',e=>{
     closeTaskModal();
     if(typeof closeSubjectModal==='function')closeSubjectModal();
     if(typeof closeNotaModal==='function')closeNotaModal();
+    if(typeof closeEditProfile==='function')closeEditProfile();
+    if(typeof closeChangePass==='function')closeChangePass();
     document.getElementById('widget-picker').classList.remove('open');
   }
 });
